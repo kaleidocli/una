@@ -1015,4 +1015,4 @@ def help_dict_plugin():
                 continue
 
 
-client.run(TOKEN) 
+client.run(str(os.environ.get(TOKEN)))
