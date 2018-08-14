@@ -3,3 +3,4 @@ pip
 colorlog
 asyncio
 requests
+nltk
