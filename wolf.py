@@ -1016,4 +1016,4 @@ def help_dict_plugin():
                 continue
 
 
-client.run(str(os.environ.get(TOKEN)))
+client.run(TOKEN)
