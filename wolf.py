@@ -2,8 +2,8 @@ import discord
 from discord.ext import commands
 
 from time import sleep
+from time import strftime, gmtime
 from os import listdir
-import os
 import random
 import asyncio
 import threading
@@ -12,7 +12,7 @@ from nltk import word_tokenize
 channel_bind = ''
 help_dict = {}
 
-#holder = {}
+g_holder = {}
 roles_list = []
 roles_dict = {}
 players_list = []
@@ -30,8 +30,10 @@ db_time = 30                            #Debate time (secs) (Note that the db_ti
 PHASE = 'n/a'
 DAY = 0
 vote_board = '```n/a```'                      #A board displays players and the votes for them
+GM = 'Cli'
+GM_dict = {}
 
-TOKEN = 'NDQ5Mjc4ODExMzY5MTExNTUz.DeiXGg.4qhnjnBG8EGpUxEorp1h8wYxLVk'
+TOKEN = 'NDc4OTYzMTIyMjMzNjcxNjgz.DlW5wA.KsTfEAj97MYEG8Sw63immKmPSHE'
 
 client = commands.Bot(command_prefix = '-')
 client.remove_command('help')
@@ -75,6 +77,7 @@ class player:
 @client.command(pass_context=True)
 async def help(ctx, *args):
     global help_dict
+    global STNDRD_roles_list
     raw = []
     help_key = ''
 
@@ -94,7 +97,7 @@ async def help(ctx, *args):
         box.set_thumbnail(url='https://cdn.discordapp.com/avatars/449278811369111553/d4a3085e1b4a9b77d51abf8da3ebcc22.jpg')
         box.add_field(name='Werewolf', value='`help` `cast` `assign` `resign` `setcard` `start` `vote` `stt` `addtime`', inline=False)
         box.add_field(name='Config', value="""`bind` `unbind`""", inline=False)
-        box.add_field(name="Rules, Functions and FAQ about the game", value="[Default](http://luatmasoi.blogspot.com/2017/05/huong-dan-luat-ma-soi-viet-hoa-mo-rong.html) || [One-Night](http://thegioiboardgame.vn/blogs/board-game-nhap-mon/1000049261-huong-dan-choi-bai-ma-soi-one-night)")
+        box.add_field(name="Rules, Functions and FAQ about the game", value="`rnr`")
         box.set_footer(text="use `-help <command>` for more info about the command.")
         await client.say(embed=box)
     elif help_key in list(help_dict.keys()):
@@ -104,6 +107,37 @@ async def help(ctx, *args):
             colour = discord.Colour(0x011C3A)
         )
         await client.say(embed=box_small)
+    elif raw[0] == 'rnr':
+        try:
+            if raw[1].lower() in STNDRD_roles_list:
+                try:
+                    await client.send_file(ctx.message.channel, f"roles_help/{raw[1]}.png", content=f"Roles: **{raw[1].upper()}**")
+                except: print("FILE NOT FOUND!")
+            elif raw[1].lower() == 'gm':
+                with open('roles_help/gm.txt', 'r', encoding='utf-8-sig') as g:
+                    box_small = discord.Embed(
+                        title = '**:ledger: G A M E  M A S T E R**',
+                        description = f"{g.read()}",
+                        colour = discord.Colour(0x011C3A)
+                    )
+                await client.say(embed=box_small)
+            elif raw[1].lower() == 'faq':
+                with open('rules_help/faq.txt', 'r', encoding='utf-8-sig') as f:
+                    box_small = discord.Embed(
+                        title = '**:ledger: F A Q**',
+                        description = f"{f.read()}",
+                        colour = discord.Colour(0x011C3A)
+                    )
+                await client.say(embed=box_small)
+        except IndexError:
+            box_small = discord.Embed(
+                title = '**R U L E S  \'N  R O L E S  **',
+                description = "______ _______ ________ ________ ________ _______",
+                colour = discord.Colour(0x011C3A)
+            )
+            box_small.add_field(name="Thư mục postfix", value="`rnr` + [`<role>` | `gm` | `faq`]")
+            box_small.add_field(name='______ _______ ________ ________ ________ _______', value="from blog __LuatMaSoi__ | [LUẬT CHƠI MA SÓI Việt Hóa Mở Rộng](http://luatmasoi.blogspot.com/2017/05/huong-dan-luat-ma-soi-viet-hoa-mo-rong.html)", inline=False)
+            await client.say(embed=box_small)
     else:
         await client.say(":warning: Please only use one of the available commands.")
 
@@ -114,7 +148,7 @@ async def bind(ctx):
     global channel_bind
     if not channel_bind:
         channel_bind = ctx.message.channel.name
-        await client.say(f":white_check_mark: Binded to channel {ctx.message.channel.name}!")
+        await client.say(f":white_check_mark: Bot's binded to channel {ctx.message.channel.name}!")
     else:
         await client.say(f":warning: Please unbind the bot from text channel <{channel_bind}>")
 
@@ -142,7 +176,7 @@ async def cast(ctx):
     global PHASE
 
     if lock == True: 
-        await client.say(":upside_down: Game mở rồi đó cha nội!")
+        await client.say(":upside_down: Game's already been opened!")
         return
 
     roles_list = ['villager', 'witch', 'guardian', 'tree', 'hunter', 'cupid', 'wolf']
@@ -171,36 +205,48 @@ async def uncast(ctx):
     global PHASE
 
     if lock == False: 
-        await client.say(f":upside_down: Đóng gì đóng hoài vậy {ctx.message.author.name}...")
+        await client.say(f":upside_down: Game's already been closed {ctx.message.author.name}...")
         return
 
     #Check if game has started yet
     mode = await game_stt_check()
-    if mode == 'on': await client.say(f"Người ta đang chơi mà đòi phá game hở {ctx.message.author.mention} =))"); return
+    if mode == 'on': await client.say(f"They're playing you know, {ctx.message.author.mention} :<"); return
 
     lock = False
     db_time = 30
     PHASE = 'n/a'
     slots = 0
     await data_clear_procedure()
+    roles_list.clear()
     channel_bind = ''
     box = await msg_embe(':tada: **Avada kedavra!** The game is *gone*, oof.', 0x011C3A)
     await client.say(embed=box)
 
 @client.command(pass_context=True)
-async def assign(ctx):
+async def assign(ctx, *args):
     global players_list
     global players_dict
+    global GM_dict
+    global GM
     global slots
     clc = 0; mode = ''
 
     #Check if game has started yet
     mode = await game_stt_check()
-    if mode == 'on': await client.say(f"{ctx.message.author.mention} chậm chân rồi :< Game còn dang dở nên thôi ngồi chờ đỡ nha {ctx.message.author.name}."); return
+    if mode == 'on': await client.say(f"Too late, {ctx.message.author.mention} :< Grab some snack and watch them suffer!"); return
 
     #Check if game's opened or there are any slots left
-    if not roles_list:  await client.say(f":x: Hình như chưa có game nào bắt đầu, hoặc là có mà game hết slots rồi á, {ctx.message.author.name}. Sumimasen!"); return
-    if ctx.message.author.name not in players_list:
+    if not roles_list:  await client.say(f":x: Maybe there's no game, maybe there's not slot left for you, {ctx.message.author.name}..."); return
+    if ctx.message.author.name not in players_list and GM != ctx.message.author.name:
+        for i in args:
+            if i.lower() == 'gm':
+                if not GM_dict:
+                    GM_dict['GM'] = ctx.message.author
+                    GM = ctx.message.author.name
+                    await client.say(f"{ctx.message.author.mention} has been made a **Game Master**!")
+                    await setup_get()
+                    return
+                else: await client.say("Có GM xí chỗ rồi :>"); return
         players_list.append(ctx.message.author.name)
         players_dict[ctx.message.author.name] = ctx.message.author
 
@@ -222,12 +268,19 @@ async def assign(ctx):
 async def resign(ctx):
     global players_list
     global players_dict
+    global GM
+    global GM_dict
     global slots
     clc = 0
 
     #Check if game's opened or there are any slots left
-    if not roles_list:  await client.say(f":x: {ctx.message.author.name} đã `-assign` đâu mà đòi `-resign` :>"); return
-    if ctx.message.author.name in players_list:
+    if not roles_list:  await client.say(f":x: {ctx.message.author.name}, you can't `-resign` when you've not assigned yet :>"); return
+    if ctx.message.author.name in players_list or GM == ctx.message.author.name:
+        if GM == ctx.message.author.name:
+            GM_dict.clear()
+            GM = 'Cli'
+            await client.say(f"{ctx.message.author.mention} is **no longer** a Game Master!")
+            return
         players_list.pop(int(players_list.index(ctx.message.author.name)))
         del players_dict[ctx.message.author.name]
 
@@ -273,7 +326,13 @@ async def vote(ctx, *args):
     try:
         if raw[0] in players_list and status_dict[raw[0]] == 'ALIVE':
             vote_dict[ctx.message.author.name] = raw[0]
-            await client.say(f":raised_hand: {ctx.message.author.mention} đã vote cho {players_dict[raw[0]].mention} lên giàn! --- [{len(list(vote_dict.keys()))}/{len(alive)} số người đã vote]")       
+            await client.say(f":raised_hand: {ctx.message.author.mention} has voted to hang {players_dict[raw[0]].mention}! --- [{len(list(vote_dict.keys()))}/{len(alive)} total votes received]")       
+            #Message to the GM (if available)
+            if GM != 'Cli':
+                tm = ''
+                tm = strftime("%H:%M:%S", gmtime())
+                await client.send_message(GM_dict['GM'], f"`{tm}`\t:raised_hand: |\t **{ctx.message.author.name}** has voted to hang {players_dict[raw[0]].mention}! --- [{len(list(vote_dict.keys()))}/{len(alive)} total votes received]")
+
         else:
             await client.say(f"{ctx.message.author.mention}, please vote a player **in the list** that is **still alive**.")
     except IndexError:
@@ -284,12 +343,18 @@ async def setcard(ctx, *args):
     global roles_list
     global STNDRD_roles_list
     global CONS_roles_list
+    global slots
     global lock
+    global GM
     stt = ''; cards = []
 
-    if not lock: await client.say(":warning: **Hiện tại chưa có game nào nha!** Cần thì dùng `-create` để tạo game."); return
+    #Check GM authority (if available)
+    if GM != 'Cli' and GM != ctx.message.author.name:
+        await client.say(f"{ctx.message.author.mention}, bạn không có quyền sử dụng lệnh này khi có GM!")
+        return
+    if not lock: await client.say(":warning: **No game's currently active!** Use `-create` to make one."); return
     stt = await game_stt_check()
-    if stt == 'on': await client.say(":warning: Ê ê ai cho đổi card **giữa trận** thế!"); return
+    if stt == 'on': await client.say(":warning: Hey hey no role request **during match**!"); return
 
     for card in args:
         if card in STNDRD_roles_list:
@@ -299,6 +364,7 @@ async def setcard(ctx, *args):
             return
     roles_list = cards.copy()
     CONS_roles_list = roles_list.copy()
+    slots = int(len(roles_list))
     await setup_get()
 
 @client.command(pass_context=True, aliases=['+t'])
@@ -309,35 +375,79 @@ async def addtime(ctx, *args):
     raw = []
 
     #Check if the current phase is DAY
-    if PHASE != 'day': await client.say(":warning: Ban ngày mới sử dụng lệnh này được :< Mà game bắt đầu chưa thế?"); return
+    if PHASE != 'day': await client.say(":warning: **Daylight**'s required to use this command! :< Mou, have you even joined a game?"); return
 
     sample = int(db_time)
     for t in args:
         try:
             int(t)
         except ValueError:
-            await client.say(":warning: Đưa tui *integer* thôi, tui ngu lắm >.<")
+            await client.say(":warning: Hey, me stupid, please **give** nothing but an integer >.<")
             return
         raw.append(t)
     sample += int(raw[0])
     if sample > 300:
-        await client.say(":warning: Cho tán nhảm tầm **5 mins** (300 secs) thôi! Hông đòi thêm được nữa đâu, hiểu không!?")
+        await client.say(":warning: You can only say shit for 5 mins (300secs). No more, kay?!")
         return
     else:
         db_time += int(raw[0])
         await client.say(f":white_check_mark: Now you have `{db_time}` secs left to watch your friends suffer <3")
 
-@client.command()
-async def stt():
+@client.command(pass_context=True)
+async def stt(ctx):
     global status_dict
     global players_dict
     global lock
+    global GM
+    global GM_dict
+    global g_holder
+    global PHASE
+    global DAY
     keys = list(status_dict.keys())
     static =  ''
     board = ''
 
+    lover = ''; prey = ''; pot = ''
+
     #Check if there's a game
-    if not bool(players_dict): await client.say(":x: Có game đâu mà đòi status =))"); return
+    if not bool(players_dict): await client.say("```There's only dust in this place...```"); return
+    
+    #GM full status
+    if ctx.message.author.name == GM:
+        for i in keys:
+            
+            try:
+                if g_holder[i].lover:
+                    lover = ''.join([' >Love: ', g_holder[i].lover])
+            except: pass
+            try:
+                if g_holder[i].prey:
+                    prey = ''.join([' >Prey: ', g_holder[i].prey])
+            except: pass
+            try:
+                if g_holder[i].role == 'witch':
+                    pot = ''.join(['> Heal:', g_holder[i].heal_pod, '> Poison:', g_holder[i].kill_pod])
+            except: pass
+            
+            if status_dict[i] == 'ALIVE':
+                static = f"[{status_dict[i]}][ ]"
+            elif status_dict[i] == 'DEAD':
+                static = f"[ ][{status_dict[i]}]"
+            if keys.index(i) == 0 and len(keys) > 1:
+                board = f'```md\n**{PHASE.upper()} of Day {DAY}**\n\n{i}    ------------    {static} \n> Roles: {g_holder[i].role}{lover}{prey}{pot}'
+            elif keys.index(i) == int(len(keys) - 1):
+                if len(keys) > 1:
+                    seq = (board, f" \n{i}    ------------    {static}  \nRoles: {g_holder[i].role}{lover}{prey}{pot}```")
+                    board = ''.join(seq)
+                else:
+                    board = f"```md\n**{PHASE.upper()} of Day {DAY}**\n\n{i}    ------------    {static} \n> Roles: {g_holder[i].role}{lover}{prey}{pot}```"
+            else:
+                seq = (board, f" \n{i}    ------------    {static}")
+                board = ''.join(seq)
+            #Send status board
+            await client.send_message(GM_dict['GM'], board)
+            return
+    
     #Generate status board msg
     for i in keys:
         
@@ -360,21 +470,29 @@ async def stt():
     #Send status board
     await client.say(board)
 
-
-
-@client.command()
-async def start():
+@client.command(pass_context=True)
+async def start(ctx):
     global players_list
     global players_dict
     global roles_list
     global roles_dict
     global PHASE
     global DAY
+    global GM
+    global GM_dict
+    global lock
+    global g_holder
     wolf = []; villager = []
+    inp = ''
+
+    #Check if there's a GM and the sender's the GM
+    if GM != 'Cli' and GM != ctx.message.author.name:
+        await client.say(f"{ctx.message.author.mention}, you have no permission to use this command when there's a **GM**!")
+        return
 
     #Check if there's enough players
     if len(players_list) < 1: 
-        await client.say("Not enough players!")
+        await client.say("How about we start a game WITH some hooman?!")
         return
 
     #Randomly assign roles to players
@@ -398,9 +516,12 @@ async def start():
         else:
             roles_dict[holder[i].role] = i
 
+    #Pass info from holder to g_holder
+    g_holder = holder.copy()
+
     #Inform role for each player
     for name in players_list:    
-        await client.send_message(players_dict[name], f"Your role: << {holder[name].role} >>")
+        await client.send_message(players_dict[name], f":bell: **Your role:** << {holder[name].role} >>")
     #Message names of other wolves for each wolf
     for name in wolf:
         rest = wolf.copy(); rest.remove(name)
@@ -409,27 +530,54 @@ async def start():
     print(roles_list)
     print(roles_dict)
     print(players_dict)
+    print(players_list)
     while lock:
         DAY += 1
         #Update status_dict
         await status_update(holder)
-        
+
     # NIGHT PHASE
         PHASE = 'night'
         await night(holder)
-        try:    
-            await judge(holder)
-        except: pass
+        if GM == 'Cli':                     #Bot-mode  
+            try:
+                await judge(holder)
+            except: pass
+        else:                               #GM-mode
+            await client.send_message(GM_dict['GM'], f"GM {GM_dict['GM'].mention}, `..next` or `..end` | **New day** or **end** the game.")
+            while True:
+                inp = await client.wait_for_message(author=GM_dict['GM'])
+                if inp.content == '..next' and lock == True:
+                    break
+                elif inp.content == '..next' and lock == False:
+                    await client.send_message(GM_dict['GM'], "All players are ded, please `-end` the game.")
+                elif inp.content == '..end':
+                    lock = False; break
         if not lock: break
         #Update status_dict
-        status_update(holder)
+        await status_update(holder)
+        g_holder = holder.copy()
     # DAY PHASE        
         PHASE = 'day'
         await day(holder)
-        try:
-            await judge(holder)
-        except: pass
+        if GM == 'Cli':                     #Bot-mode
+            try:
+                await judge(holder)
+            except: pass
+        else:                               #GM-mode
+            await client.send_message(GM_dict['GM'], "`..next` or `..end` | **Next day** or **end** the game.")
+            while True:
+                inp = await client.wait_for_message(author=GM_dict['GM'])
+                if inp.content == '..next' and lock == True:
+                    break
+                elif inp.content == '..next' and lock == False:
+                    await client.send_message(GM_dict['GM'], "All players are ded, please `-end` the game.")
+                elif inp.content == '..end':
+                    lock = False; break           
         if not lock: break
+        #Update status_dict
+        await status_update(holder)
+        g_holder = holder.copy()
     await reveal(holder)
     await data_clear_procedure()
     
@@ -441,34 +589,48 @@ async def night(holder):
     global roles_list
     global roles_dict
     global prevsavi
+    global GM
+    global GM_dict
+    global lock
 
     death_bywolf_wish = []
     death_byman_wish = []
+    death_byGM_wish = []
     death_list = []
     save_wish = []
-
-    await client.say("===========:waxing_gibbous_moon:=== MÀN ĐÊM DẦN BUÔNG XUỐNG ===:waxing_gibbous_moon:============")
+    inp1 = ''; raw1 = []
+    
+    if GM != 'Cli':
+        await client.send_message(GM_dict['GM'], content=f":page_facing_up: **Night - DAY {DAY}**")
+    await client.say("===========:waxing_gibbous_moon:=== SUN SET, SOON CAME THE MOON ===:waxing_gibbous_moon:============")
 
     #CUPID - call
     if 'cupid' in list(roles_dict.keys()):
         if holder[roles_dict['cupid']].call_pass:
-            box_cupid = await msg_embe("**Cupid ơi dậy đi nào!!!!**", 0xFED0EE)
+            box_cupid = await msg_embe("**Cupid wakes up pleasee!!!!**", 0xFED0EE)
             await client.say(embed=box_cupid)
         
-            await client.send_message(players_dict[roles_dict['cupid']], "Hãy chọn người bạn muốn bắn")
+            await client.send_message(players_dict[roles_dict['cupid']], "Who do you wanna shoot?")
             rep1 = await client.wait_for_message(author=players_dict[roles_dict['cupid']])
             while rep1.content not in players_list:
-                await client.send_message(players_dict[roles_dict['cupid']], "Xin hãy chọn người ở trong list!")
+                await client.send_message(players_dict[roles_dict['cupid']], ":o: I don't know that guy, is he **in the game**?!")
                 rep1 = await client.wait_for_message(author=players_dict[roles_dict['cupid']])
 
-            await client.send_message(players_dict[roles_dict['cupid']], "Hãy chọn người tiếp theo bạn muốn bắn")
+            await client.send_message(players_dict[roles_dict['cupid']], "And who's the next one?")
             rep2 = await client.wait_for_message(author=players_dict[roles_dict['cupid']])
             while rep2.content not in players_list:
-                await client.send_message(players_dict[roles_dict['cupid']], "Xin hãy chọn người ở trong list!")
+                await client.send_message(players_dict[roles_dict['cupid']], ":o: I don't know that guy, is he **in the gam**e?!")
                 rep2 = await client.wait_for_message(author=players_dict[roles_dict['cupid']])
 
             holder[rep1.content].lover = rep2.content
             holder[rep2.content].lover = rep1.content
+
+            #Message to the GM (if available)
+            if GM != 'Cli':
+                tm = ''
+                tm = strftime("%H:%M:%S", gmtime())
+                await client.send_message(GM_dict['GM'], f"`{tm}`\t:cupid: |\t **{holder[roles_dict['cupid']].name}** (as *Cupid*) has shot {rep1.content} and {rep2.content}.")
+
             client.send_message(players_dict[rep1.content], f"{players_dict[rep1.content].mention}, you and {players_dict[rep2.content].mention} are the lovers!")
             await client.send_message(players_dict[rep2.content], f"{players_dict[rep2.content].mention}, you and {players_dict[rep1.content].mention} are the lovers!")
 
@@ -476,10 +638,10 @@ async def night(holder):
     
     #GUARDIAN - call
     if 'guardian' in list(roles_dict.keys()):
-        box_guardian = await msg_embe("**Bảo vệ ơiii dậy đi nào! Bảo vệ muốn bảo vệ ai nào?**", 0xFAFAFA)
+        box_guardian = await msg_embe("**Guard! Gear up and do your job!**", 0xFAFAFA)
         await client.say(embed=box_guardian)
         if holder[roles_dict['guardian']].status and holder[roles_dict['guardian']].role == 'guardian':    
-            await client.send_message(players_dict[roles_dict['guardian']], "Xin hãy chọn người bạn muốn bảo vệ. Nếu không, hãy nhập 'none'.")
+            await client.send_message(players_dict[roles_dict['guardian']], "So who'd you like to protect? If you don't, please use `none`.")
             rep = await client.wait_for_message(author=players_dict[roles_dict['guardian']])
             while rep.content not in players_list or rep.content == prevsavi:
                 if rep.content == 'none': break
@@ -493,17 +655,22 @@ async def night(holder):
                         rep = await client.wait_for_message(author=players_dict[roles_dict['guardian']])
                         continue
                 except: pass
-                await client.send_message(players_dict[roles_dict['guardian']], ":o: Xin hãy chọn người ở trong list!")
+                await client.send_message(players_dict[roles_dict['guardian']], ":o: I don't know that guy, is he **in the game**?!")
                 rep = await client.wait_for_message(author=players_dict[roles_dict['guardian']])
             if rep.content != 'none' and rep.content not in save_wish:
                 save_wish.append(rep.content)
                 prevsavi = rep.content
+            #Message to the GM (if available)
+            if GM != 'Cli':
+                tm = ''
+                tm = strftime("%H:%M:%S", gmtime())
+                await client.send_message(GM_dict['GM'], f"`{tm}`\t:shield: |\t **{holder[roles_dict['guardian']].name}** (as *Guardian*) has protected **{rep.content}**.")
             await client.send_message(players_dict[roles_dict['guardian']], ":ok_hand:")
         else:
             sleep(5)
 
     #WOLF - call
-    box_wolf = await msg_embe("**Sói ơiii dậy đi nào! Sói muốn đợp ai nào?**", 0xFF3600)
+    box_wolf = await msg_embe("**Wolves! You're hungry? There's always hooman waiting for you.. to be chewed, ofc!**", 0xFF3600)
     await client.say(embed=box_wolf)
     try:
         death = await bite(holder)
@@ -515,55 +682,65 @@ async def night(holder):
 
     #TREE - call
     if 'tree' in list(roles_dict.keys()):
-        box_tree = await msg_embe("**Tiên tri ơiii dậy nào! Tree muốn tree ai nào?**", 0x2886B9)
+        box_tree = await msg_embe("**Tree-san tree-san, who would you want to tree on?**", 0x2886B9)
         await client.say(embed=box_tree)
         await tree(holder)
 
     #WITCH - call
     if 'witch' in list(roles_dict.keys()):
         #HEALING
-        box_witch1 = await msg_embe("**Phù thủy ơiii dậy cái nào!! Thủy muốn dùng bình cứu lên ai nào?**", 0xC09DF3)
-        box_witch2 = await msg_embe("**Phù thủy ơiii dậy cái nào!! Thủy muốn dùng bình độc lên ai nào?**", 0xC09DF3)
+        box_witch1 = await msg_embe("**Dear witchy, there's still one healing pod on your shelf. Wanna get rid of karma?**", 0xC09DF3)
+        box_witch2 = await msg_embe("**P/s: Karma sucks. Go kill someone with your devious poison fluid ( ͡° ͜ʖ ͡°)**", 0xC09DF3)
         await client.say(embed=box_witch1)
         if holder[roles_dict['witch']].status == True and holder[roles_dict['witch']].heal_pod == 1 and holder[roles_dict['witch']].role == 'witch':
-            await client.send_message(players_dict[roles_dict['witch']], "Hãy chọn người bạn muốn **cứu**, chọn 'none' để không làm gì.")
+            await client.send_message(players_dict[roles_dict['witch']], "Choose someone you want to save. `none` to omit.")
             rep = await client.wait_for_message(author=players_dict[roles_dict['witch']])
             while rep.content not in players_list:
                 if rep.content == 'none': break
                 try:
                     if not holder[rep.content].status:
-                        await client.send_message(players_dict[roles_dict['witch']], ":o: Xin hãy chọn người **còn sống**!")
+                        await client.send_message(players_dict[roles_dict['witch']], ":o: Even lolies can't save a *dead* man you know...")
                         continue
                 except: pass
-                await client.send_message(players_dict[roles_dict['witch']], ":o: Xin hãy chọn người ở trong list!")
+                await client.send_message(players_dict[roles_dict['witch']], ":o: I don't know that guy, is he **in the game**?!")
                 rep = await client.wait_for_message(author=players_dict[roles_dict['witch']])
             if rep.content != 'none':
                 save_wish.append(rep.content)
                 holder[roles_dict['witch']].heal_pod = 0
             else:
                 pass
+            #Message to the GM (if available)
+            if GM != 'Cli':
+                tm = ''
+                tm = strftime("%H:%M:%S", gmtime())
+                await client.send_message(GM_dict['GM'], f"`{tm}`\t:pill: |\t **{holder[roles_dict['witch']].name}** (as *Witch*) has used healing on **{rep.content}**.")
             await client.send_message(players_dict[roles_dict['witch']], ":ok_hand:")
         else:
             sleep(10)
         #POISONING
         await client.say(embed=box_witch2)
         if holder[roles_dict['witch']].status == True and holder[roles_dict['witch']].kill_pod == 1 and holder[roles_dict['witch']].role == 'witch':
-            await client.send_message(players_dict[roles_dict['witch']], "Hãy chọn người bạn muốn **giết**, chọn 'none' để không làm gì.")
+            await client.send_message(players_dict[roles_dict['witch']], "Choose someone you want to kill, `none` to omit.")
             rep = await client.wait_for_message(author=players_dict[roles_dict['witch']])
             while rep.content not in players_list:
                 if rep.content == 'none': break
                 try:
                     if not holder[rep.content].status:
-                        await client.send_message(players_dict[roles_dict['witch']], ":o: Xin hãy chọn người **còn sống**!")
+                        await client.send_message(players_dict[roles_dict['witch']], ":o: Even dildos can't choke a dead body til death you know...")
                         continue
                 except: pass
-                await client.send_message(players_dict[roles_dict['witch']], ":o: Xin hãy chọn người ở trong list!")
+                await client.send_message(players_dict[roles_dict['witch']], ":o: I don't know that guy, is he **in the game**?!")
                 rep = await client.wait_for_message(author=players_dict[roles_dict['witch']])
             if rep.content != 'none':
                 death_byman_wish.append(rep.content)
                 holder[roles_dict['witch']].kill_pod = 0
             else:
                 pass
+            #Message to the GM (if available)
+            if GM != 'Cli':
+                tm = ''
+                tm = strftime("%H:%M:%S", gmtime())
+                await client.send_message(GM_dict['GM'], f"`{tm}`\t:skull_crossbones: |\t **{holder[roles_dict['witch']].name}** (as *Witch*) has used poison pot on **{rep.content}**.")
             await client.send_message(players_dict[roles_dict['witch']], ":ok_hand:")
         else:
             sleep(10)
@@ -571,16 +748,16 @@ async def night(holder):
     #ELDER - call
     if 'elder' in list(roles_dict.keys()):
         if holder[roles_dict['elder']].call_pass:
-            box_elder = msg_embe("**Già làng ơi dậy đi ngủ nào!!**", 0x858585)
+            box_elder = msg_embe("**Grandny wake up! Here's some sleeping pills**", 0x858585)
             await client.say(embed=box_elder)
-            await client.send_message(players_dict[roles_dict['elder']], "Đi ngủ đi :>")
-            holder[roles_dict['elder']].call_pass = 0
+            await client.send_message(players_dict[roles_dict['elder']], "Go to sleep :>")
+            holder[roles_dict['elder']].call_pass = False
 
     #HUNTER - call
     if 'hunter' in list(roles_dict.keys()):
-        box_hunter = await msg_embe("**Thợ săn ơi dậy đi nàooooooo!**", 0xEE9C3A)
+        box_hunter = await msg_embe("**Hunter. Huntress. May the odds be ever in your favor!**", 0xEE9C3A)
         await client.say(embed=box_hunter)
-        await client.send_message(players_dict[roles_dict['hunter']], "Hãy chọn người bạn muốn nhắm!")
+        await client.send_message(players_dict[roles_dict['hunter']], "Aim someone. Anyone.")
         if holder[roles_dict['hunter']].status == True and holder[roles_dict['hunter']].role == 'hunter':
             rep = await client.wait_for_message(author=players_dict[roles_dict['hunter']])
             while rep.content not in players_list:
@@ -589,16 +766,45 @@ async def night(holder):
                         await client.send_message(players_dict[roles_dict['hunter']], ":o: Xin hãy chọn người **còn sống**!")
                         continue
                 except: pass
-                await client.send_message(players_dict[roles_dict['hunter']], ":o: Xin hãy chọn người ở trong list!")
+                await client.send_message(players_dict[roles_dict['hunter']], ":o: I mean not that one, is he even **in the game**?!")
                 rep = await client.wait_for_message(author=players_dict[roles_dict['hunter']])
             holder[roles_dict['hunter']].prey = rep.content
+            #Message to the GM (if available)
+            if GM != 'Cli':
+                tm = ''
+                tm = strftime("%H:%M:%S", gmtime())
+                await client.send_message(GM_dict['GM'], f"`{tm}`\t:gun: |\t **{holder[roles_dict['hunter']].name}** (as *Hunter*) aimed his gun at **{rep.content}**.")
             await client.send_message(players_dict[roles_dict['hunter']], ":ok_hand:")
         else:
             sleep(7)
 
-    death_list = await sentence(holder, death_byman_wish, death_bywolf_wish, save_wish)
-    
-    await phase_inform(holder, 'night', death_list)
+    if GM == 'Cli':
+        await phase_inform(holder, 'night', death_list)
+        death_list = await sentence(holder, death_byman_wish, death_bywolf_wish, death_byGM_wish, save_wish)
+    else:
+        await client.send_message(GM_dict['GM'], f':bulb: Use `..botkill` to let bot automatically kill, `..kill [p1] [p2] [..]` to do it manually.')
+        rr = True
+        while rr == True:    
+            inp1 = await client.wait_for_message(author=GM_dict['GM'])
+            raw1 = word_tokenize(inp1.content)
+            if raw1[0] == '..botkill':
+                death_list = await sentence(holder, death_byman_wish, death_bywolf_wish, death_byGM_wish, save_wish)
+                await phase_inform(holder, 'night', death_list)
+                #Check if all the players are dead. If true, lock = False. This one's only in GM-mode
+                for i in players_list:
+                    lock = False
+                    if holder[i].status == True: lock = True; break
+                return          
+            elif raw1[0] == '..kill':
+                for p in raw1[1:]:
+                    if p not in players_list or holder[p].status == False: await client.send_message(GM_dict['GM'], f":warning: Whether **{p}**'s ded, whether **{p}**'s not even in the game :<"); break
+                    else: death_byGM_wish.append(p); rr = False; break
+                #Check if all the players are dead. If true, lock = False. This one's only in GM-mode
+                for i in players_list:
+                    lock = False
+                    if holder[i].status == True: lock = True; break
+        death_list = await sentence(holder, death_byman_wish, death_bywolf_wish, death_byGM_wish, save_wish)  
+        await phase_inform(holder, 'night', death_list)
 
 async def day(holder):
     global players_list
@@ -607,29 +813,59 @@ async def day(holder):
     global roles_dict
     global vote_dict
     global db_time
+    global GM_dict
+    global GM
+    global lock
     vote_dict.clear()
     max_vote_player = []
     
     death_bywolf_wish = []
     death_byman_wish = []
+    death_byGM_wish = []
     death_list = []
     save_wish = []
 
-    await client.say(f"============ BÌNH MINH LÓ DẠNG :white_sun_small_cloud: NGÀY {DAY} BẮT ĐẦU! ============\n:bulb: NOTE: Kiếm một thằng mà treo cổ đi :>")
-    await loop_check(holder)
-    max_vote_player = await vote_check(holder)
-    await client.say(f":stopwatch: **{' và '.join(max_vote_player)}**, bạn có `{db_time} giây` để biện luận! \n:warning: Các bạn vẫn có thể đổi vote của mình bằng cách vote người mình muốn vote.")    
-    await loop_timer()
-    max_vote_player = await vote_check(holder)
-
-    #Check max_vote_player
-    if len(max_vote_player) == 1:
-        death_byman_wish.append(max_vote_player[0])
-        await client.say(f":skull: ** PHỰC ** :skull: Tiếng thòng lòng quanh cổ {max_vote_player[0]} nặng nề vang lên...")
+    if GM != 'Cli':
+        await client.send_message(GM_dict['GM'], f":page_facing_up: **Moring - DAY {DAY}**")
+    await client.say(f"============ HENCE ROSE THE DAWN :white_sun_small_cloud: DAY {DAY} BEGUN! ============")
+    if GM == 'Cli':
+        await loop_check(holder)
+        max_vote_player = await vote_check(holder)
+        await client.say(f":stopwatch: **{' and '.join(max_vote_player)}**, you have `{db_time} secs` to defend yourself! \n:warning: You still can change your vote simply by voting the one you want.")    
+        await loop_timer()
+        max_vote_player = await vote_check(holder)
+        #Check max_vote_player
+        if len(max_vote_player) == 1:
+            death_byman_wish.append(max_vote_player[0])
+            await client.say(f":skull: ** URGHH ** :skull: {max_vote_player[0]} has learnt to float...")
     
-    death_list = await sentence(holder, death_byman_wish, death_bywolf_wish, save_wish)
+        death_list = await sentence(holder, death_byman_wish,  death_bywolf_wish, death_byGM_wish, save_wish)
 
-    await phase_inform(holder, 'day', death_list)
+        await phase_inform(holder, 'day', death_list)
+    else:
+        await loop_check(holder)
+        max_vote_player = await vote_check(holder)
+        await client.say(f":bulb: Players still can revote if they change their mind, simply by vote the one you want\n:bulb: GM {GM_dict['GM'].mention}, use `..count` to save the votes, use `..next` to save the votes *and* move the next phase.")
+        while True:
+            inp = await client.wait_for_message(author=GM_dict['GM'])
+            if inp.content == '..next':
+                max_vote_player = await vote_check(holder)
+                #Check max_vote_player
+                if len(max_vote_player) == 1:
+                    death_byman_wish.append(max_vote_player[0])
+                    await client.say(f":skull: ** URGHH ** :skull: {max_vote_player[0]} has learnt to float...")
+    
+                death_list = await sentence(holder, death_byman_wish,  death_bywolf_wish, death_byGM_wish, save_wish)
+
+                await phase_inform(holder, 'day', death_list)
+                #Check if all the players are dead. If true, lock = False. This one's only in GM-mode
+                for i in players_list:
+                    lock = False
+                    if holder[i].status == True: lock = True; break
+                break
+            elif inp.content == '..count':
+                max_vote_player = await vote_check(holder)
+
 
 @client.command()
 async def ping():
@@ -683,7 +919,7 @@ async def vote_check(holder):
     #Send board msg, and top vote
     vote_board = str(board)
     await client.say(board)
-    await client.say(f"```autohotkey\nThòng lọng ngay trước cổ: {' || '.join(max_vote_player)}```")
+    await client.say(f"```autohotkey\nThe most hated man: {' || '.join(max_vote_player)}```")
 
     return max_vote_player
 
@@ -717,14 +953,14 @@ async def loop_timer():
         await asyncio.sleep(1)
         db_time -= 1
         if db_time == 0: break
-        if db_time == 15: await client.say(f":stopwatch: Thời gian bào chữa còn `{db_time}`!")
-        elif db_time == 5: await client.say(f":stopwatch: Thời gian bào chữa còn `{db_time}`!")
+        if db_time == 15: await client.say(f":stopwatch: Defending time ends in `{db_time}`!")
+        elif db_time == 5: await client.say(f":stopwatch: Defending time ends in `{db_time}`!")
         elif db_time < 5: await client.say(f":stopwatch: `{db_time}`")
 
     #Reset the value
     db_time = 30
 
-async def sentence(holder, death_byman_wish, death_bywolf_wish, save_wish):
+async def sentence(holder, death_byman_wish, death_bywolf_wish, death_byGM_wish, save_wish):
     global players_list
     global players_dict
     global roles_list
@@ -755,6 +991,15 @@ async def sentence(holder, death_byman_wish, death_bywolf_wish, save_wish):
                 holder[holder[p].prey].lives -= 1
             if holder[p].lover:
                 holder[holder[p].lover].lives -= 1
+
+    #Scan and sentence players in death_byGM_wish.
+    if death_byGM_wish:
+        for p in death_byGM_wish:
+            if holder[p].role == 'elder':
+                elder_ban(holder)
+                holder[p].lives -= 1
+                await client.send_message(GM_dict['GM'], f":warning: {p}, as **elder**, is dead, other special roles' abilities are removed! GM should check `-stt` for better updates.")
+            else: holder[p].lives -= 1
 
     #Take action.
     for p in players_list:
@@ -791,14 +1036,20 @@ async def judge(holder):
         lock = False
         return
     if wolf >= villagers:
-        if lovers != 2:
+        if wolf > villagers:
             await client.say("---------------------------------------------- \n\t\t\t:wolf: **WOLVES** WON! :wolf:\n----------------------------------------------")
             lock = False
-        else:
-            if lovers == int(wolf + villagers):
+        elif wolf == villagers:
+            if int(wolf + villagers) == 4 and lovers == 2 or int(wolf + villagers) == 3 and lovers == 2 or lovers == int(wolf + villagers):         #2or3or4players
                 await client.say("---------------------------------------------- \n\t\t\t:couple_mm: **LOVERS WON!** :couple_ww:\n----------------------------------------------")
                 lock = False
-            else: pass
+            else:                                   #nplayers
+                await client.say("---------------------------------------------- \n\t\t\t:wolf: **WOLVES** WON! :wolf:\n----------------------------------------------")
+                lock = False    
+    elif wolf < villagers:
+        if int(wolf + villagers) == 4 and lovers == 2:
+            await client.say("---------------------------------------------- \n\t\t\t:couple_mm: **LOVERS WON!** :couple_ww:\n----------------------------------------------")
+            lock = False
     elif wolf == 0:
         await client.say("---------------------------------------------- \n\t\t\t:cowboy: **VILLAGERS WON!** :cowboy:\n----------------------------------------------")
         lock = False
@@ -813,25 +1064,25 @@ async def phase_inform(holder, phase, death_list):
     await status_update(holder)
 
     if phase == 'night':
-        await client.say("Tối qua chúng ta có...")
+        await client.say("Last night we had...")
         await asyncio.sleep(random.choice([2, 3]))
-        await client.say(f".. {len(death_list)} người chết!")
+        await client.say(f".. {len(death_list)} people ded!")
         if len(death_list) != 0:    
             for i in death_list:
                 await asyncio.sleep(random.choice([1, 2, 3]))
-                await client.say(f"{players_dict[i].mention} chết nè~")
+                await client.say(f"{players_dict[i].mention}'s deadsu yo~'")
         else:
-            await client.say("Mừng dễ sợ :joy:")
+            await client.say("Sigh in relief :>")
     elif phase == 'day':
-        await client.say("Và thế là...")
+        await client.say("And so it was...")
         await client.say("......")
         await asyncio.sleep(0.5)
         if len(death_list) != 0:    
             for i in death_list:
                 await asyncio.sleep(random.choice([1, 2, 3]))
-                await client.say(f"... {players_dict[i].mention} đã ra đi...")
+                await client.say(f"... {players_dict[i].mention} that left this world...")
         else:
-            await client.say("... không ai chết cả! :>")
+            await client.say("... noone. NOONE'S HANG! *REEEEEEEEEE* :>")
 
 
 async def elder_ban(holder):
@@ -850,7 +1101,7 @@ async def tree(holder):
     global roles_list
     global roles_dict
 
-    await client.send_message(players_dict[roles_dict['tree']], "Hãy chọn người bạn muốn treeeeeeee")
+    await client.send_message(players_dict[roles_dict['tree']], "Choose some one you want to treeeeeeeeeeeeeeeeeeee!")
     if holder[roles_dict['tree']].status and holder[roles_dict['tree']].role == 'tree':
         rep = await client.wait_for_message(author=players_dict[roles_dict['tree']])
         while rep.content not in players_list:
@@ -859,12 +1110,17 @@ async def tree(holder):
                     await client.send_message(players_dict[roles_dict['tree']], ":o: Xin hãy chọn người **còn sống**!")
                     continue
             except: pass
-            await client.send_message(players_dict[roles_dict['tree']], ":o: Xin hãy chọn người ở trong list!")
+            await client.send_message(players_dict[roles_dict['tree']], ":o: I don't know that guy, is he **in the game**?!")
             rep = await client.wait_for_message(author=players_dict[roles_dict['tree']])
         if holder[rep.content].role == 'wolf':
-            await client.send_message(players_dict[roles_dict['tree']], f"{players_dict[roles_dict['tree']].mention}, **gật gật gật**")
+            await client.send_message(players_dict[roles_dict['tree']], f"{players_dict[roles_dict['tree']].mention}, **nod nod nod**")
         else:
-            await client.send_message(players_dict[roles_dict['tree']], f"{players_dict[roles_dict['tree']].mention}, **lắc lắc lắc**")
+            await client.send_message(players_dict[roles_dict['tree']], f"{players_dict[roles_dict['tree']].mention}, **shake shake shake**")
+        #Message to the GM (if available)
+        if GM != 'Cli':
+            tm = ''
+            tm = strftime("%H:%M:%S", gmtime())
+            await client.send_message(GM_dict['GM'], f"`{tm}`\t:black_joker: |\t **{holder[roles_dict['tree']].name}** (as a *Tree*) has treed on **{rep.content}**.")
     else:
         sleep(8)
 
@@ -879,7 +1135,7 @@ async def bite(holder):
     while len(list(set(reps))) != 1:
         for i in roles_dict['wolf']:
             if holder[i].status == True  and holder[i].role == 'wolf':
-                await client.send_message(players_dict[i], "Xin hãy chọn người bạn muốn đợp. Nếu không, hãy nhập 'none'.")
+                await client.send_message(players_dict[i], "Choose someone you wanna bite, `none` to omit. Remember that all wolves have to choose the same prey, or you'll have to pick a again.")
                 rep = await client.wait_for_message(author=players_dict[i])
                 while rep.content not in players_list:
                     if rep.content == 'none': break
@@ -888,13 +1144,13 @@ async def bite(holder):
                             await client.send_message(players_dict[i], ":o: Xin hãy chọn người **còn sống**!")
                             continue
                     except: pass
-                    await client.send_message(players_dict[i], ":o: Xin hãy chọn người ở trong list!")
+                    await client.send_message(players_dict[i], ":o: I don't know that guy, is he **in the game**?!")
                     rep = await client.wait_for_message(author=players_dict[i])   
                 for a in roles_dict['wolf']:
                     if rep.content == 'none':
-                        await client.send_message(players_dict[a], f"{players_dict[i].mention} đã **không** vote ai hết!")
+                        await client.send_message(players_dict[a], f"{players_dict[i].mention} didn't chose anyone!")
                     else:
-                        await client.send_message(players_dict[a], f"{players_dict[i].mention} đã vote đợp {rep.content}")
+                        await client.send_message(players_dict[a], f"{players_dict[i].mention} wants to bite {rep.content}")
                 reps.append(rep.content)
             else:
                 sleep(7)
@@ -902,6 +1158,11 @@ async def bite(holder):
     if rep.content != 'none':
         death = rep.content
     else: death = 'none'
+    #Message to the GM (if available)
+    if GM != 'Cli':
+        tm = ''
+        tm = strftime("%H:%M:%S", gmtime())
+        await client.send_message(GM_dict['GM'], f"`{tm}`\t:wolf: |\t **{holder[roles_dict['wolf']].name}** (as *Wolf*) bited **{rep.content}**.")
     print(death)
     try:
         return death
@@ -937,10 +1198,14 @@ async def data_clear_procedure():
     global players_list
     global players_dict
     global roles_dict
+    global GM
+    global GM_dict
 
     players_list.clear()
     players_dict.clear()
     roles_dict.clear()
+    GM = 'Cli'
+    GM_dict.clear()
 
 async def msg_embe(msg, clc):
     embed_msg = discord.Embed(
@@ -956,6 +1221,8 @@ async def setup_get():
     global roles_dict
     global channel_bind
     global CONS_roles_list
+    global GM
+    global GM_dict
     chnl = ''; mode = ''; stt = ''; plists = []; roles = ''
 
     #Joined players
@@ -982,7 +1249,10 @@ async def setup_get():
         description = stt,
         colour = discord.Colour(0x011C3A)
     )
-    box_setup.add_field(name=f'Joined ({int(len(players_list))})', value=', '.join(plists), inline=False)
+    box_setup.add_field(name=f'Joined ({int(len(players_list))})', value=', '.join(plists), inline=True)
+    if GM == 'Cli':    
+        box_setup.add_field(name=f'Game Master', value=GM, inline=True)
+    else: box_setup.add_field(name=f'Game Master', value=GM_dict['GM'].mention, inline=True)
     box_setup.add_field(name=f'Cards ({len(CONS_roles_list)})', value=f"`{roles}`", inline=False)
     
     await client.say(embed=box_setup)
@@ -1016,4 +1286,4 @@ def help_dict_plugin():
                 continue
 
 
-client.run(TOKEN)
+client.run(TOKEN) 
