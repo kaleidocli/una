@@ -1,4 +1,4 @@
-help = Call a help box. `-help <command>` for more info about the command. `-help rules` for more info about the game.
+help = Call a help box. `-help <command>` for more info about the command. `-help rnr` for more info about the game.
 cast = Cast a game and bind the bot to the channel the command is sent. __[alias=--c]__
 uncast = Uncast a game and unbind the bot, if it was previously binded. __[alias=--uc]__
 assign = Assign you to the players list. (Disabled during game)
