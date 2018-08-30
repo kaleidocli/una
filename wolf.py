@@ -7,6 +7,7 @@ from os import listdir
 import random
 import asyncio
 import threading
+from contextlib import suppress
 from nltk import word_tokenize 
 
 channel_bind = ''
@@ -33,7 +34,8 @@ vote_board = '```n/a```'                      #A board displays players and the 
 GM = 'Cli'
 GM_dict = {}
 
-TOKEN = 'NDc4OTYzMTIyMjMzNjcxNjgz.DlW5wA.KsTfEAj97MYEG8Sw63immKmPSHE'
+#TOKEN = 'NDc4OTYzMTIyMjMzNjcxNjgz.DlW5wA.KsTfEAj97MYEG8Sw63immKmPSHE' 
+TOKEN = 'NDQ5Mjc4ODExMzY5MTExNTUz.Dl2k3A.pGUlnO4HDB2xCH31iXa3uTUJxqA' #CLI
 
 client = commands.Bot(command_prefix = '-')
 client.remove_command('help')
@@ -95,7 +97,7 @@ async def help(ctx, *args):
     #Determine which help page should be displayed
     if help_key == '':
         box.set_thumbnail(url='https://cdn.discordapp.com/avatars/449278811369111553/d4a3085e1b4a9b77d51abf8da3ebcc22.jpg')
-        box.add_field(name='Werewolf', value='`help` `cast` `assign` `resign` `setcard` `start` `vote` `stt` `addtime`', inline=False)
+        box.add_field(name='Werewolf', value='`help` `cast` `bind` `unbind` `assign` `resign` `setcard` `start` `vote` `stt` `addtime`', inline=False)
         box.add_field(name='Config', value="""`bind` `unbind`""", inline=False)
         box.add_field(name="Rules, Functions and FAQ about the game", value="`rnr`")
         box.set_footer(text="use `-help <command>` for more info about the command.")
@@ -271,10 +273,14 @@ async def resign(ctx):
     global GM
     global GM_dict
     global slots
-    clc = 0
+    clc = 0; stt = ''
 
     #Check if game's opened or there are any slots left
     if not roles_list:  await client.say(f":x: {ctx.message.author.name}, you can't `-resign` when you've not assigned yet :>"); return
+    #Check if the game's already started
+    stt = await game_stt_check()
+    if stt == 'on': await client.say(f":x: {ctx.message.author.name}, you can't `-resign` during a game! Don't be a thrower..."); return
+
     if ctx.message.author.name in players_list or GM == ctx.message.author.name:
         if GM == ctx.message.author.name:
             GM_dict.clear()
@@ -297,6 +303,30 @@ async def resign(ctx):
         await client.say(embed=box)
     else:
         await client.say("Omae wa've not joined game yet!")
+
+@client.command(pass_context=True)
+async def skip(ctx):
+    global lock
+    global players_list
+    stt = ''
+
+    #Check if the game starts
+    stt = await game_stt_check()
+    if stt == 'off': await client.say("There's no game to skip!"); return
+
+    #Check if the user is in players_list
+    if ctx.message.author.name not in players_list: await client.say(f"{ctx.message.author.mention} you don't flip other's board like that. It's rude :<")
+    
+    msg = await client.send_message(ctx.message.channel, "Counting skips...")
+    await client.add_reaction(msg, '\U00002705')
+    while True:
+        rea = await client.wait_for_reaction(emoji='\U00002705', timeout=20, message=msg)
+        if rea[0].me != client and rea[0].count >= int(len(players_list) + 1):
+            await client.say("SEE ya...")
+            exit()
+            #lock = False
+            #await client.say(":warning: Game will end by the end of the day.")
+
 
 @client.command(pass_context=True, aliases=['-v'])
 async def vote(ctx, *args):
