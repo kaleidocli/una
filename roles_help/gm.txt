@@ -1,20 +1,20 @@
-﻿**D E S C R I P T I O N**
-**>** Là chức vụ quản trị game aka **Quản trò**. Không thể tham gia game, không thể vote, không được can thiệp vào quá trình game. 
-**>** Về mặc định, quản trò là bot Cli (tự hành), sử dụng `-assign gm` để đảm nhiệm chức quản trò. 
-**>** Khi có GM, chỉ GM mới có thể sử dụng `-setcard` `-start` `-addtime` cùng với những lệnh `..` khác, và riêng lệnh `-stt` của GM sẽ có thêm những thông tin bí mật của những người chơi khác.
-**>** Xin lưu ý, lúc này người nắm quyền thực sự là Quản trò, hầu hết mọi diễn biến trong game đều do Quản trò quyết định, bot chỉ là một *công cụ* cung cấp các thông tin hỗ trợ cho những quyết định đó.
+**D E S C R I P T I O N**
+**>** A moderator aka 'host'. Cannot participate in any activities in the game, is prohibited from interfering the game.
+**>** By default, the host is bot-CLI (autohost). You can use `-assign gm` to make yourself one.
+**>** If there's a GM, only GMs can use  `-setcard` `-start` `-addtime`, with some other `..` cmds. Plus, as a GM, `-stt` will provide more specific info about the players (roles etc.).
+**>** Please note that GM is the real host, the bot is nothing but a tool for you to run the game more easily. All the decision on living and deaths is made by GM, so please be responsible.
 
-**G U I D E **
-**>** Game sẽ có hai phase, **ngày** và **đêm**. Xuyên suốt game, GM cần đưa đầy thông tin cho bot để bot có thể hỗ trợ cho GM.
+**G U I D E**
+**>** There are *two* phases in the game, **day** and **night**. Thoughout the game, GMs need to provide all the info to the bot so that it can fully functional.
+---------- **NIGHT** ----------
+**>>** During **the night**, the bot will ask each role in DM and their action (biting, protecting..) will be recorded and messaged to GM.
+**>>** Based on the log, GM now needs to decide who's dead, who lives, by using one of the following method.
+**>>>** `..botkill` == automatic killing || `..kill [player's name] [..]` == manual killing (please note that both method can't be undone once inited).
+**>>** At the end of the night, GM could choose `..end` to end the game, or `..next` to move to the next phase (day).
+----------- **DAY** -----------
+**>>** At the beginning of **day** phase, *players* will vote for someone they want to hang. GMs please remind them to do that, and GMs *can't vote*.
+**>>** Once *everyone* has used their vote, a votes-count status box will be displayed, and only GM can call it again using `..vote`.
+**>>** Now is the time for the highest-voted one to **defend** oneself, to **persuade** others change their vote to someone he/she wants. Players can change vote simply by `-vote` someone else.
+**>>** Once someone is sure dead, GMs can hang that one using `..next`. Then, GMs can choose to end game - `..end`, or to move to next day- `..next`.
 
-**>>** **Ban đêm** trong khi các roles được *auto* gọi, mọi sự việc (ai cắn ai, ai bảo vệ ai..) sẽ được ghi chép và dm cho GM. 
-**>>** Sau đó, hoặc là GM chọn `..botkill` để auto giết, hoặc chọn `..kill [] [..]` để tự đưa ra **phán quyết cuối cùng** và giết (xin lưu ý là lỡ giết nhầm thì không có đường quay lại). 
-**>>** Sau đó, GM sẽ tự chọn hoặc `..end` game, hoặc `..next` sang phase tiếp theo dựa trên những kết quả ban nãy.
-
-**>>** Khi vừa vào phase **ban ngày**, xin lưu ý GM nhắc người chơi `-vote` (GM không thể *vote*). 
-**>>** Một khi *tất cả* người chơi đã bỏ phiếu, một bảng status đếm phiếu sẽ auto hiện ra, và chỉ GM mới có thể gọi lên lại bằng lệnh `..vote`. Lúc này GM nên bắt đầu phiên biên hộ, và sau khi biện hộ xong, GM nên hỏi xem có ai bỏ phiếu lại không (revote bằng lệnh `-vote`), nếu có thì nhớ chốt phiếu bằng `..vote`, nếu không và GM muốn đưa giàn, dùng `..next`.  
-**>>** Sau đó, GM sẽ tự chọn hoặc `..end` game, hoặc `..next` sang phase tiếp theo dựa trên những kết quả ban nãy.
-
-:bulb:
-**>** Khác biệt lớn nhất giữa GM-bot và GM-người là phase Ngày.
-**>** Các GM nên nhớ, con bot **là công cụ của bạn**, là thứ giúp bạn điều hành game tiện hơn, chứ không nhất thiết cứ phải chạy theo nó.
+----------- END -----------
