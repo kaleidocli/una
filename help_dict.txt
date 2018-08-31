@@ -1,10 +1,13 @@
-help = Call a help box. `-help <command>` for more info about the command. `-help rnr` for more info about the game.
-cast = Cast a game and bind the bot to the channel the command is sent. __[alias=--c]__
-uncast = Uncast a game and unbind the bot, if it was previously binded. __[alias=--uc]__
-assign = Assign you to the players list. (Disabled during game)
-resign = Resign you from the players list. (Disabled during game)
-setcard = Pick cards (duplicate's accepted), and the new ones will replace old ones. (Disabled during game) `-setcard <card1> <card2> <..>`
+help = Call a help box. `-help <command>` for more info about the command. `-help rnr` for rules and roles help.
+cast = Create a queue and bind the bot to the channel the command is sent. || [alias=--c]
+uncast = Remove the queue and unbind the bot (if it was previously binded). || [alias=--uc]
+assign = Assign you to the queue. (Disabled during game)
+resign = Resign you from the queue. (Disabled during game)
+setcard = Pick a set of cards and replace the old one with it. (Disabled during game) || `-setcard <card1> <card2> <..>` || [alias=--stc]
 start = Start the game.
-vote = Vote someone. If <player> is omitted, call a box contains players and the votes for them. (Only available during daytime) `-vote <player>` __[alias=--v]__
+stop = Stop the game by the end of the current phase.
+vote = Vote someone. If <player> is omitted, call a box contains players and the votes for them. (Only available during daytime) || `-vote <player>` [alias=--v]
 stt = Call a status box, contains players' names and their status - alive or not. 
-addtime = Lengthen the debate time by <x> secs, with <x> as a integer (required). Debate time can't be longer than 5 mins (300 secs). \n`-addtime <x>` __[alias=-+t]__
+addtime = Lengthen the debate time by <x> secs, with <x> as a integer (required). Debate time can't be longer than 5 mins (300 secs). || `-addtime <x>` [alias=-+t]
+bind = Bind the bot to the channel from where the command was sent.
+unbind = Unbind the bot.
