@@ -97,7 +97,7 @@ async def help(ctx, *args):
     #Determine which help page should be displayed
     if help_key == '':
         box.set_thumbnail(url='https://cdn.discordapp.com/avatars/449278811369111553/d4a3085e1b4a9b77d51abf8da3ebcc22.jpg')
-        box.add_field(name='Werewolf', value='`help` `cast` `bind` `unbind` `assign` `resign` `setcard` `start` `vote` `stt` `addtime`', inline=False)
+        box.add_field(name='Werewolf', value='`help` `cast` `bind` `unbind` `assign` `resign` `setcard` `stop` `skip` `vote` `stt` `addtime`', inline=False)
         box.add_field(name='Config', value="""`bind` `unbind`""", inline=False)
         box.add_field(name="Rules, Functions and FAQ about the game", value="`rnr`")
         box.set_footer(text="use `-help <command>` for more info about the command.")
@@ -305,7 +305,7 @@ async def resign(ctx):
         await client.say("Omae wa've not joined game yet!")
 
 @client.command(pass_context=True)
-async def skip(ctx):
+async def stop(ctx):
     global lock
     global players_list
     stt = ''
@@ -317,13 +317,13 @@ async def skip(ctx):
     #Check if the user is in players_list
     if ctx.message.author.name not in players_list: await client.say(f"{ctx.message.author.mention} you don't flip other's board like that. It's rude :<")
     
-    msg = await client.send_message(ctx.message.channel, "Counting skips...")
+    msg = await client.send_message(ctx.message.channel, f":envelope_with_arrow: All `{len(players_list)}` players have to vote the emote to stop the game! (Players=Emotes - 1)")
     await client.add_reaction(msg, '\U00002705')
     while True:
         rea = await client.wait_for_reaction(emoji='\U00002705', timeout=20, message=msg)
         if rea[0].me != client and rea[0].count >= int(len(players_list) + 1):
-            await client.say("SEE ya...")
-            exit()
+            await client.say(":heavy_check_mark: Game will stop by the end of the current phase!")
+            lock = False
             #lock = False
             #await client.say(":warning: Game will end by the end of the day.")
 
@@ -368,7 +368,7 @@ async def vote(ctx, *args):
     except IndexError:
         await client.say(vote_board)
 
-@client.command(pass_context=True)
+@client.command(pass_context=True, aliases=['-stc'])
 async def setcard(ctx, *args):
     global roles_list
     global STNDRD_roles_list
@@ -559,7 +559,6 @@ async def start(ctx):
 
     print(roles_list)
     print(roles_dict)
-    print(players_dict)
     print(players_list)
     while lock:
         DAY += 1
@@ -570,9 +569,9 @@ async def start(ctx):
         PHASE = 'night'
         await night(holder)
         if GM == 'Cli':                     #Bot-mode  
-            try:
-                await judge(holder)
-            except: pass
+            #try:
+            await judge(holder)
+            #except: pass
         else:                               #GM-mode
             await client.send_message(GM_dict['GM'], f"GM {GM_dict['GM'].mention}, `..next` or `..end` | **New day** or **end** the game.")
             while True:
@@ -809,8 +808,8 @@ async def night(holder):
             sleep(7)
 
     if GM == 'Cli':
-        await phase_inform(holder, 'night', death_list)
         death_list = await sentence(holder, death_byman_wish, death_bywolf_wish, death_byGM_wish, save_wish)
+        await phase_inform(holder, 'night', death_list)
     else:
         await client.send_message(GM_dict['GM'], f':bulb: Use `..botkill` to let bot automatically kill, `..kill [p1] [p2] [..]` to do it manually.')
         rr = True
@@ -1054,11 +1053,11 @@ async def judge(holder):
             wolf += 1
         else:
             villagers += 1
-        if holder[p].lover != None:
+        if holder[p].lover:
             if holder[p].role == 'wolf' and holder[holder[p].lover].role != 'wolf' or holder[p].role != 'wolf' and holder[holder[p].lover].role == 'wolf':
                 lovers += 1
             
-        
+    print(f"wolf({wolf}) --- villagers({villagers}) --- lovers({lovers})")
 
     #Measuring
     if wolf == 0 and villagers == 0 and lovers == 0: 
@@ -1100,7 +1099,7 @@ async def phase_inform(holder, phase, death_list):
         if len(death_list) != 0:    
             for i in death_list:
                 await asyncio.sleep(random.choice([1, 2, 3]))
-                await client.say(f"{players_dict[i].mention}'s deadsu yo~'")
+                await client.say(f"{players_dict[i].mention} is deadsu yo~")
         else:
             await client.say("Sigh in relief :>")
     elif phase == 'day':
