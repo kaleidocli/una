@@ -1079,9 +1079,9 @@ async def judge(holder):
         if int(wolf + villagers) == 4 and lovers == 2:
             await client.say("---------------------------------------------- \n\t\t\t:couple_mm: **LOVERS WON!** :couple_ww:\n----------------------------------------------")
             lock = False
-    elif wolf == 0:
-        await client.say("---------------------------------------------- \n\t\t\t:cowboy: **VILLAGERS WON!** :cowboy:\n----------------------------------------------")
-        lock = False
+        elif wolf == 0:
+            await client.say("---------------------------------------------- \n\t\t\t:cowboy: **VILLAGERS WON!** :cowboy:\n----------------------------------------------")
+            lock = False
 
 async def phase_inform(holder, phase, death_list):
     global players_list
