@@ -34,7 +34,7 @@ vote_board = '```n/a```'                      #A board displays players and the 
 GM = 'Cli'
 GM_dict = {}
 
-TOKEN = ''
+TOKEN = 'NDc4OTYzMTIyMjMzNjcxNjgz.DlW5wA.KsTfEAj97MYEG8Sw63immKmPSHE' 
 
 client = commands.Bot(command_prefix = '-')
 client.remove_command('help')
@@ -500,7 +500,7 @@ async def stt(ctx):
     await client.say(board)
 
 @client.command(pass_context=True)
-async def start(ctx):
+async def starto(ctx):
     global players_list
     global players_dict
     global roles_list
