@@ -34,8 +34,6 @@ vote_board = '```n/a```'                      #A board displays players and the 
 GM = 'Cli'
 GM_dict = {}
 
-TOKEN = 'NDc4OTYzMTIyMjMzNjcxNjgz.DlW5wA.KsTfEAj97MYEG8Sw63immKmPSHE' 
-
 client = commands.Bot(command_prefix = '-')
 client.remove_command('help')
 
@@ -1313,5 +1311,5 @@ def help_dict_plugin():
             except:
                 continue
 
-
+os.getenv('TOKEN')
 client.run(TOKEN) 
