@@ -1312,5 +1312,5 @@ def help_dict_plugin():
             except:
                 continue
 
- os.getenv('TOKEN')
+os.getenv('TOKEN')
 client.run(TOKEN) 
