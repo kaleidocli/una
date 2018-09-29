@@ -35,6 +35,8 @@ vote_board = '```n/a```'                      #A board displays players and the 
 GM = 'Cli'
 GM_dict = {}
 
+TOKEN = ''
+
 client = commands.Bot(command_prefix = '-')
 client.remove_command('help')
 
